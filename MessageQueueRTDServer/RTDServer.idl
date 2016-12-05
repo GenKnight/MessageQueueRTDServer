@@ -1,0 +1,34 @@
+// RTDServer.idl : IDL source for RTDServer
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (RTDServer.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(ACDC2301-08EB-48BC-883E-736C933C15F1),
+	dual,
+	nonextensible,
+	pointer_default(unique)
+]
+interface IRTDServer : IDispatch{
+};
+[
+	uuid(146E4154-A55B-40DC-9C26-9B538274877C),
+	version(1.0),
+]
+library RTDServerLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(5A0D59E6-9A31-4DA1-8E77-929219921D64)		
+	]
+	coclass RTDServer
+	{
+		[default] interface IRTDServer;
+	};
+};
+

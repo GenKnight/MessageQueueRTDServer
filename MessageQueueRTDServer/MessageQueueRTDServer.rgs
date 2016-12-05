@@ -1,0 +1,26 @@
+HKCR
+{
+	MessageQueue.RTDServer.1 = s 'MessageQueue.RTDServer'
+	{
+		CLSID = s '{5A0D59E6-9A31-4DA1-8E77-929219921D64}'
+	}
+	MessageQueue.RTDServer = s 'MessageQueue.RTDServer'
+	{		
+		CurVer = s 'MessageQueue.RTDServer.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {5A0D59E6-9A31-4DA1-8E77-929219921D64} = s 'MessageQueue.RTDServer'
+		{
+			ProgID = s 'MessageQueue.RTDServer.1'
+			VersionIndependentProgID = s 'MessageQueue.RTDServer'
+			ForceRemove Programmable
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			TypeLib = s '{146E4154-A55B-40DC-9C26-9B538274877C}'
+			Version = s '1.0'
+		}
+	}
+}
