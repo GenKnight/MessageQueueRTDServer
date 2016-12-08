@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <map>
 #include "Topic.h"
 
@@ -17,6 +18,7 @@ public:
 	HRESULT removeTopic(long topicId);
 	HRESULT removeTopics();
 	vector<long> getTopicIds();
+	vector<string> getTopicNames();
 	size_t getTopicCount();
 
 private:

@@ -50,7 +50,8 @@ HRESULT Topics::createTopic(long topicId, SAFEARRAY **safearray)
 Topic* Topics::getTopic(long topicId)
 {
 	map<long, Topic>::iterator it = m_map_topics.find(topicId);
-	if (it != m_map_topics.end()) {
+	if (it != m_map_topics.end()) 
+	{
 		return &(it->second);
 	}
 	return NULL;
@@ -59,7 +60,8 @@ Topic* Topics::getTopic(long topicId)
 HRESULT Topics::removeTopic(long topicId)
 {
 	map<long, Topic>::iterator it = m_map_topics.find(topicId);
-	if (it != m_map_topics.end()) {
+	if (it != m_map_topics.end()) 
+	{
 		m_map_topics.erase(it);
 	}
 	return S_OK;
@@ -74,8 +76,20 @@ HRESULT Topics::removeTopics()
 vector<long> Topics::getTopicIds()
 {
 	vector<long> v;
-	for (map<long, Topic>::iterator it = m_map_topics.begin(); it != m_map_topics.end(); ++it) {
+	for (map<long, Topic>::iterator it = m_map_topics.begin(); it != m_map_topics.end(); ++it) 
+	{
 		v.push_back(it->first);
+	}
+	return v;
+}
+
+vector<string> Topics::getTopicNames()
+{
+	vector<string> v;
+	for (map<long, Topic>::iterator it = m_map_topics.begin(); it != m_map_topics.end(); ++it) 
+	{
+		Topic t = it->second;
+		v.push_back(t.getUniqueName());
 	}
 	return v;
 }

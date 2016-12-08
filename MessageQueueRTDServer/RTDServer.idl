@@ -14,7 +14,8 @@ import "ocidl.idl";
 	nonextensible,
 	pointer_default(unique)
 ]
-interface IRTDServer : IDispatch{
+interface IRTDServer : IDispatch
+{
 };
 [
 	uuid(146E4154-A55B-40DC-9C26-9B538274877C),

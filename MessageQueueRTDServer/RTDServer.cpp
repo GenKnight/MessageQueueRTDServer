@@ -12,7 +12,16 @@ void TimerWindow::OnTimer(UINT_PTR /*timer*/)
 
 	if (0 != m_callback)
 	{
-		m_callback->UpdateNotify();
+		vector<string> topicNames = Topics::instance()->getTopicNames();
+		for (auto tName : topicNames)
+		{
+			if (MessageQueue::instance()->MQMessageExists(tName.c_str()))
+			{
+				m_callback->UpdateNotify();
+				break;
+			}
+		}
+		
 	}
 }
 
@@ -42,17 +51,6 @@ void TimerWindow::Stop()
 	VERIFY(KillTimer(0));
 }
 
-Observer::Observer(Subject *subj, IRTDUpdateEvent *uptEvent)
-{
-	this->subj = subj;
-	this->uptEvent = uptEvent;
-	subj->attach(this);
-}
-
-Subject * Observer::getSubject()
-{
-	return subj;
-}
 
 
 
@@ -83,7 +81,9 @@ HRESULT CRTDServer::ConnectData(long topicID, SAFEARRAY **strings, VARIANT_BOOL 
 	HR(Topics::instance()->createTopic(topicID, strings));
 	HR(MessageQueue::instance()->MQOpen(Topics::instance()->getTopic(topicID)->getUniqueName().c_str()));
 
-	if (Topics::instance()->getTopicCount() == 1) {
+
+	if (Topics::instance()->getTopicCount() == 1)
+	{
 		m_timer.Start();
 	}
 
@@ -98,7 +98,8 @@ HRESULT CRTDServer::RefreshData(long *topicCount, SAFEARRAY **parrayOut)
 	}
 
 	vector<long> topicIds = Topics::instance()->getTopicIds();
-	long numOfTopics = static_cast<long>(topicIds.size());
+	long numOfTopics = static_cast<long> (topicIds.size());
+	long numOfNewValues = static_cast<long> (m_updatedTopics.size());
 
 	CComSafeArrayBound bounds[2] =
 	{
@@ -108,22 +109,25 @@ HRESULT CRTDServer::RefreshData(long *topicCount, SAFEARRAY **parrayOut)
 
 	CComSafeArray<VARIANT> data(bounds, _countof(bounds));
 	LONG indices[2];
-
+	
 	int i = 0;
-	for (vector<long>::iterator it = topicIds.begin(); it != topicIds.end(); it++, i++) {
+	for (vector<long>::iterator it = topicIds.begin(); it != topicIds.end(); it++, i++)
+	{
 		indices[0] = 0;
 		indices[1] = i;
 
 		long topicId = *it;
 		HR(data.MultiDimSetAt(indices, CComVariant(topicId)));
 
-		CComVariant msg;
-		HR(GetMsg(topicId, &msg));
+		CComVariant value;
+		HR(GetMsg(topicId, &value));
 
 		indices[0] = 1;
 		indices[1] = i;
-		HR(data.MultiDimSetAt(indices, msg));
+		HR(data.MultiDimSetAt(indices, value));
 	}
+	
+	m_updatedTopics.clear();
 
 	*parrayOut = data.Detach();
 
@@ -136,7 +140,8 @@ HRESULT CRTDServer::RefreshData(long *topicCount, SAFEARRAY **parrayOut)
 
 HRESULT CRTDServer::DisconnectData(long topicID)
 {
-	if (Topics::instance()->getTopicCount() <= 0) {
+	if (Topics::instance()->getTopicCount() <= 0)
+	{
 		m_timer.Stop();
 	}
 
@@ -164,7 +169,8 @@ HRESULT CRTDServer::ServerTerminate()
 	m_timer.SetCallback(0);
 
 	vector<long> topicIds = Topics::instance()->getTopicIds();
-	for (auto topicId : topicIds) {
+	for (auto topicId : topicIds)
+	{
 		MessageQueue::instance()->MQClose(Topics::instance()->getTopic(topicId)->getUniqueName().c_str());
 	}
 	HR(Topics::instance()->removeTopics());
@@ -181,7 +187,6 @@ HRESULT CRTDServer::GetMsg(long topicID, VARIANT *value)
 	HR(MessageQueue::instance()->MQRecv(Topics::instance()->getTopic(topicID)->getUniqueName().c_str(), &msg));
 
 	CComBSTR string(msg);
-
 	value->vt = VT_BSTR;
 	value->bstrVal = string.Detach();
 

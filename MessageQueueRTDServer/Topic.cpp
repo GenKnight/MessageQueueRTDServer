@@ -15,12 +15,15 @@ Topic::~Topic()
 
 string Topic::getUniqueName()
 {
-	if (uName.empty()) {
+	if (uName.empty()) 
+	{
 		uName = "";
-		for (auto str : this->strings) {
+		for (auto str : this->strings) 
+		{
 			uName += str + "_";
 		}
-		if (uName.back() == '_') {
+		if (uName.back() == '_') 
+		{
 			uName = uName.substr(0, uName.size() - 1);
 		}
 	}

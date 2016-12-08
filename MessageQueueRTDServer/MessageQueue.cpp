@@ -15,18 +15,21 @@ MessageQueue::~MessageQueue()
 MessageQueue * MessageQueue::instance()
 {
 	if (!s_instance)
-		s_instance = new MessageQueue;
+	{
+		s_instance = new MessageQueue();
+	}
 	return s_instance;
 }
 
 HRESULT MessageQueue::MQOpen(const char *qname, int maxQSize, int maxQMsg)
 {
-	try {
-		message_queue mq(open_or_create, qname, 10, 32);
+	try 
+	{
+		message_queue mq(open_or_create, qname, maxQSize, maxQMsg);
 	}
-	catch (interprocess_exception &ex) {
-		std::cout << ex.what() << std::endl;
-		return E_ABORT;
+	catch (interprocess_exception &ex)
+	{
+		cout << ex.what() << endl;
 	}
 
 	return S_OK;
@@ -34,12 +37,13 @@ HRESULT MessageQueue::MQOpen(const char *qname, int maxQSize, int maxQMsg)
 
 HRESULT MessageQueue::MQClose(const char *qname)
 {
-	try {
+	try 
+	{
 		message_queue::remove(qname);
 	}
-	catch (interprocess_exception &ex) {
-		std::cout << ex.what() << std::endl;
-		return E_ABORT;
+	catch (interprocess_exception &ex)
+	{
+		cout << ex.what() << endl;
 	}
 
 	return S_OK;
@@ -48,14 +52,16 @@ HRESULT MessageQueue::MQClose(const char *qname)
 HRESULT MessageQueue::MQSend(const char *qname, const char *msg)
 {
 	
-	try {
+	try
+	{
 		message_queue mq(open_only, qname);
 		mq.send(msg, strlen(msg), 0);
-		std::cout << "Sent: '" << msg << "'" << std::endl;
+
+		cout << "Sent: '" << msg << "'" << endl;
 	}
-	catch (interprocess_exception &ex) {
-		std::cout << ex.what() << std::endl;
-		return E_ABORT;
+	catch (interprocess_exception &ex)
+	{
+		cout << ex.what() << endl;
 	}
 
 	return S_OK;
@@ -63,68 +69,44 @@ HRESULT MessageQueue::MQSend(const char *qname, const char *msg)
 
 HRESULT MessageQueue::MQRecv(const char *qname, char **msg)
 {
-	try {
+	try
+	{
 		message_queue mq(open_only, qname);
 		char *m = new char[64];
 		unsigned int priority;
 		size_t recvd_size;
-		if (mq.try_receive(m, strlen(m), recvd_size, priority)) {
+		if (mq.try_receive(m, strlen(m), recvd_size, priority))
+		{
 			m[recvd_size] = '\0';
 			m = (char *) realloc(m, recvd_size + 1);
 			*msg = m;
-			std::cout << "Reveived: '" << *msg << "'" << std::endl;
+
+			cout << "Reveived: '" << *msg << "'" << endl;
 		}
-		else {
+		else 
+		{
 			*msg = "no message";
 		}
 	}
-	catch (interprocess_exception &ex) {
-		std::cout << ex.what() << std::endl;
-		return E_ABORT;
-	}
-
-	return S_OK;
-}
-
-Subject::Subject(Event evt)
-{
-	this->evt = evt;
-}
-
-HRESULT Subject::attach(Observer * obs)
-{
-	observers.push_back(obs);
-	return S_OK;
-}
-
-HRESULT Subject::detach(Observer * obs)
-{
-	std::vector<class Observer *>::iterator it = std::find(observers.begin(), observers.end(), obs);
-	if (it != observers.end()) {
-		observers.erase(it);
-	}
-	return S_OK;
-}
-
-HRESULT Subject::detachAll()
-{
-	observers.clear();
-	return S_OK;
-}
-
-HRESULT Subject::notify()
-{
-	for (vector<Observer *>::const_iterator it = observers.begin(); it != observers.end(); ++it)
+	catch (interprocess_exception &ex)
 	{
-		if (it != observers.end()) {
-			//(*it)->update();
-		}
+		cout << ex.what() << endl;
 	}
+
 	return S_OK;
 }
 
-Event Subject::getEvent()
+bool MessageQueue::MQMessageExists(const char * qname)
 {
-	return evt;
+	try
+	{
+		message_queue mq(open_only, qname);
+		//return mq.get_num_msg() > 0;
+		return true;
+	}
+	catch (interprocess_exception &ex)
+	{
+		cout << ex.what() << endl;
+	}
+	return false;
 }
-

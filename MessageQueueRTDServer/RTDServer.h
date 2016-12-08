@@ -5,6 +5,8 @@
 #include "resource.h"       // main symbols
 #include "MessageQueue.h"
 #include "Topics.h"
+#include <vector>
+#include <list>
 #include "RTDServer_i.h"
 
 
@@ -14,6 +16,7 @@
 
 using namespace ATL;
 using namespace std;
+using namespace boost;
 
 
 // TimerWindow
@@ -42,19 +45,20 @@ public:
 
 };
 
-class Observer {
+class CWorkerTask
+{
 private:
-	Subject *subj;
-	CComPtr<IRTDUpdateEvent> uptEvent;
+	long topicId;
+	Topic * m_pTopic;
+	IRTDUpdateEvent * m_pCallback;
+	list<long> * m_pNewResults;
 
 public:
-	Observer(Subject *subj, IRTDUpdateEvent *uptEvent);
-	virtual HRESULT update() = 0;
-
-protected:
-	Subject *getSubject();
+	CWorkerTask(long topicId, Topic *pTopic, IRTDUpdateEvent * pCallback, list<long> * pNewResults);
+	HRESULT operator()();
 
 };
+
 
 
 // CRTDServer
@@ -102,6 +106,7 @@ public:
 
 private:
 	TimerWindow m_timer;
+	list<long> m_updatedTopics;
 
 };
 
