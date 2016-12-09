@@ -26,6 +26,8 @@ HRESULT MessageQueue::MQOpen(const char *qname, int maxQSize, int maxQMsg)
 	try 
 	{
 		message_queue mq(open_or_create, qname, maxQSize, maxQMsg);
+
+		SharedMemory::instance()->createSharedMemory(qname);
 	}
 	catch (interprocess_exception &ex)
 	{
@@ -40,6 +42,15 @@ HRESULT MessageQueue::MQClose(const char *qname)
 	try 
 	{
 		message_queue::remove(qname);
+		
+		message_notification * notification = SharedMemory::instance()->getSharedMemory(qname)->notification;
+		if (notification != nullptr) {
+			scoped_lock<interprocess_mutex> lock(notification->mutex);
+			notification->close = true;
+			notification->cond_msg_exists.notify_all();
+		}
+		
+		SharedMemory::instance()->destroySharedMemory(qname);
 	}
 	catch (interprocess_exception &ex)
 	{
@@ -51,13 +62,17 @@ HRESULT MessageQueue::MQClose(const char *qname)
 
 HRESULT MessageQueue::MQSend(const char *qname, const char *msg)
 {
-	
 	try
 	{
 		message_queue mq(open_only, qname);
 		mq.send(msg, strlen(msg), 0);
 
 		cout << "Sent: '" << msg << "'" << endl;
+
+		message_notification * notification = SharedMemory::instance()->getSharedMemory(qname)->notification;
+		if (notification != nullptr) {
+			notification->cond_msg_exists.notify_one();
+		}
 	}
 	catch (interprocess_exception &ex)
 	{
@@ -94,19 +109,4 @@ HRESULT MessageQueue::MQRecv(const char *qname, char **msg)
 	}
 
 	return S_OK;
-}
-
-bool MessageQueue::MQMessageExists(const char * qname)
-{
-	try
-	{
-		message_queue mq(open_only, qname);
-		//return mq.get_num_msg() > 0;
-		return true;
-	}
-	catch (interprocess_exception &ex)
-	{
-		cout << ex.what() << endl;
-	}
-	return false;
 }

@@ -5,6 +5,7 @@
 #include "resource.h"       // main symbols
 #include "MessageQueue.h"
 #include "Topics.h"
+#include <boost/thread/thread.hpp>
 #include <vector>
 #include <list>
 #include "RTDServer_i.h"
@@ -14,51 +15,10 @@
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
 #endif
 
+
 using namespace ATL;
 using namespace std;
 using namespace boost;
-
-
-// TimerWindow
-
-class TimerWindow : public CWindowImpl<TimerWindow, CWindow, CWinTraits<>>
-{
-private:
-	CComPtr<IRTDUpdateEvent> m_callback;
-
-	void OnTimer(UINT_PTR /*timer*/);
-
-public:
-	BEGIN_MSG_MAP(TimerWindow)
-		MSG_WM_TIMER(OnTimer)
-	END_MSG_MAP()
-
-	TimerWindow();
-
-	~TimerWindow();
-
-	void SetCallback(IRTDUpdateEvent *callback);
-
-	void Start();
-
-	void Stop();
-
-};
-
-class CWorkerTask
-{
-private:
-	long topicId;
-	Topic * m_pTopic;
-	IRTDUpdateEvent * m_pCallback;
-	list<long> * m_pNewResults;
-
-public:
-	CWorkerTask(long topicId, Topic *pTopic, IRTDUpdateEvent * pCallback, list<long> * pNewResults);
-	HRESULT operator()();
-
-};
-
 
 
 // CRTDServer
@@ -102,11 +62,30 @@ public:
 	STDMETHOD(Heartbeat)(long *pfRes);
 	STDMETHOD(ServerTerminate)();
 
+protected:
 	STDMETHOD(GetMsg)(long topicID, VARIANT *value);
 
 private:
-	TimerWindow m_timer;
 	list<long> m_updatedTopics;
+	CComPtr<IRTDUpdateEvent> m_callback;
+
+};
+
+
+// Observer
+
+class Observer
+{
+private:
+	Topic * m_pTopic;
+	IRTDUpdateEvent * m_callback;
+	list<long> * m_pNewResults;
+
+public:
+	Observer(Topic *pTopic, IRTDUpdateEvent * pCallback, list<long> * pNewResults);
+	~Observer();
+	HRESULT SetCallback(IRTDUpdateEvent *callback);
+	HRESULT operator()();
 
 };
 

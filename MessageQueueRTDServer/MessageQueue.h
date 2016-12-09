@@ -1,8 +1,7 @@
 #pragma once
 
+#include "SharedMemory.h"
 #include <boost/interprocess/ipc/message_queue.hpp>
-#include <string>
-#include <map>
 #include <iostream>
 
 
@@ -21,7 +20,6 @@ public:
 	HRESULT MQClose(const char *qname);
 	HRESULT MQSend(const char *qname, const char *msg);
 	HRESULT MQRecv(const char *qname, char **msg);
-	bool MQMessageExists(const char *qname);
 
 private:
 	MessageQueue();

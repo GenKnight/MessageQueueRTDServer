@@ -4,67 +4,17 @@
 #include "RTDServer.h"
 
 
-// TimerWindow
-
-void TimerWindow::OnTimer(UINT_PTR /*timer*/)
-{
-	Stop();
-
-	if (0 != m_callback)
-	{
-		vector<string> topicNames = Topics::instance()->getTopicNames();
-		for (auto tName : topicNames)
-		{
-			if (MessageQueue::instance()->MQMessageExists(tName.c_str()))
-			{
-				m_callback->UpdateNotify();
-				break;
-			}
-		}
-		
-	}
-}
-
-TimerWindow::TimerWindow()
-{
-	Create(0);
-	ASSERT(0 != m_hWnd);
-}
-
-TimerWindow::~TimerWindow()
-{
-	VERIFY(DestroyWindow());
-}
-
-void TimerWindow::SetCallback(IRTDUpdateEvent *callback)
-{
-	m_callback = callback;
-}
-
-void TimerWindow::Start()
-{
-	SetTimer(0, 2000);
-}
-
-void TimerWindow::Stop()
-{
-	VERIFY(KillTimer(0));
-}
-
-
-
-
 // CSimpleRTDServer
 
-HRESULT CRTDServer::ServerStart(IRTDUpdateEvent *callbackObject, long *pfRes)
+HRESULT CRTDServer::ServerStart(IRTDUpdateEvent *callback, long *pfRes)
 {
 
-	if (0 == callbackObject || 0 == pfRes)
+	if (0 == callback || 0 == pfRes)
 	{
 		return E_POINTER;
 	}
 
-	m_timer.SetCallback(callbackObject);
+	m_callback = callback;
 
 	*pfRes = 1;
 
@@ -79,14 +29,17 @@ HRESULT CRTDServer::ConnectData(long topicID, SAFEARRAY **strings, VARIANT_BOOL 
 	}
 
 	HR(Topics::instance()->createTopic(topicID, strings));
-	HR(MessageQueue::instance()->MQOpen(Topics::instance()->getTopic(topicID)->getUniqueName().c_str()));
+	Topic * topic = Topics::instance()->getTopic(topicID);
 
-
-	if (Topics::instance()->getTopicCount() == 1)
+	if (topic != nullptr)
 	{
-		m_timer.Start();
-	}
+		HR(MessageQueue::instance()->MQOpen(topic->getUniqueName().c_str()));
 
+		Observer observer(topic, m_callback, &m_updatedTopics);
+		thread obs_thread(boost::move(observer));
+		obs_thread.detach();
+	}
+	
 	return GetMsg(topicID, pvarOut);
 }
 
@@ -97,21 +50,19 @@ HRESULT CRTDServer::RefreshData(long *topicCount, SAFEARRAY **parrayOut)
 		return E_POINTER;
 	}
 
-	vector<long> topicIds = Topics::instance()->getTopicIds();
-	long numOfTopics = static_cast<long> (topicIds.size());
 	long numOfNewValues = static_cast<long> (m_updatedTopics.size());
 
 	CComSafeArrayBound bounds[2] =
 	{
 		CComSafeArrayBound(2),
-		CComSafeArrayBound(numOfTopics)
+		CComSafeArrayBound(numOfNewValues)
 	};
 
 	CComSafeArray<VARIANT> data(bounds, _countof(bounds));
 	LONG indices[2];
 	
 	int i = 0;
-	for (vector<long>::iterator it = topicIds.begin(); it != topicIds.end(); it++, i++)
+	for (list<long>::iterator it = m_updatedTopics.begin(); it != m_updatedTopics.end(); it++, i++)
 	{
 		indices[0] = 0;
 		indices[1] = i;
@@ -131,22 +82,14 @@ HRESULT CRTDServer::RefreshData(long *topicCount, SAFEARRAY **parrayOut)
 
 	*parrayOut = data.Detach();
 
-	*topicCount = numOfTopics;
-
-	m_timer.Start();
+	*topicCount = numOfNewValues;
 
 	return S_OK;
 }
 
 HRESULT CRTDServer::DisconnectData(long topicID)
 {
-	if (Topics::instance()->getTopicCount() <= 0)
-	{
-		m_timer.Stop();
-	}
-
 	HR(MessageQueue::instance()->MQClose(Topics::instance()->getTopic(topicID)->getUniqueName().c_str()));
-
 	HR(Topics::instance()->removeTopic(topicID));
 
 	return S_OK;
@@ -166,14 +109,14 @@ HRESULT CRTDServer::Heartbeat(long *pfRes)
 
 HRESULT CRTDServer::ServerTerminate()
 {
-	m_timer.SetCallback(0);
-
 	vector<long> topicIds = Topics::instance()->getTopicIds();
 	for (auto topicId : topicIds)
 	{
 		MessageQueue::instance()->MQClose(Topics::instance()->getTopic(topicId)->getUniqueName().c_str());
 	}
 	HR(Topics::instance()->removeTopics());
+
+	m_callback = nullptr;
 
 	return S_OK;
 }
@@ -189,6 +132,62 @@ HRESULT CRTDServer::GetMsg(long topicID, VARIANT *value)
 	CComBSTR string(msg);
 	value->vt = VT_BSTR;
 	value->bstrVal = string.Detach();
+
+	return S_OK;
+}
+
+
+// Observer
+
+Observer::Observer(Topic * pTopic, IRTDUpdateEvent * pCallback, list<long>* pNewResults)
+{
+	m_pTopic = pTopic;
+	m_callback = pCallback;
+	m_pNewResults = pNewResults;
+}
+
+Observer::~Observer()
+{
+	m_callback = nullptr;
+}
+
+HRESULT Observer::SetCallback(IRTDUpdateEvent * callback)
+{
+	m_callback = callback;
+	return S_OK;
+}
+
+HRESULT Observer::operator()()
+{
+	try
+	{
+		
+		message_notification * notification = SharedMemory::instance()->getSharedMemory(m_pTopic->getUniqueName().c_str())->notification;
+		if (notification != nullptr) {
+			bool end_loop = false;
+			do
+			{
+				scoped_lock<interprocess_mutex> lock(notification->mutex);
+				notification->cond_msg_exists.wait(lock);
+
+				if (notification->close)
+				{
+					end_loop = true;
+				}
+				else
+				{
+					m_pNewResults->push_front(m_pTopic->topicId);
+					m_callback->UpdateNotify();
+				}
+
+			} while (!end_loop);
+		}
+		
+	}
+	catch (interprocess_exception &ex)
+	{
+		cout << ex.what() << endl;
+	}
 
 	return S_OK;
 }
