@@ -20,11 +20,20 @@ string Topic::getUniqueName()
 		uName = "";
 		for (auto str : this->strings) 
 		{
-			uName += str + "_";
+			if (strlen(str.c_str()) == 0 || str.empty())
+			{
+				continue;
+			} else
+			{
+				uName += str + "_";
+			}
 		}
 		if (uName.back() == '_') 
 		{
 			uName = uName.substr(0, uName.size() - 1);
+		}
+		if (uName.length() > IPC_MSG_MAX_SIZE) {
+			uName = uName.substr(0, IPC_MSG_MAX_SIZE);
 		}
 	}
 	return uName;

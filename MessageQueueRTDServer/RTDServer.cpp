@@ -1,10 +1,10 @@
-// RTDServer.cpp : Implementation of CSimpleRTDServer
+// RTDServer.cpp : Implementation of CRTDServer
 
 #include "stdafx.h"
 #include "RTDServer.h"
 
 
-// CSimpleRTDServer
+// CRTDServer
 
 HRESULT CRTDServer::ServerStart(IRTDUpdateEvent *callback, long *pfRes)
 {
@@ -161,16 +161,15 @@ HRESULT Observer::operator()()
 {
 	try
 	{
-		
-		message_notification * notification = SharedMemory::instance()->getSharedMemory(m_pTopic->getUniqueName().c_str())->notification;
-		if (notification != nullptr) {
+		ipc_message_struct * ipc_message = SharedMemory::instance()->getSharedMemory(m_pTopic->getUniqueName().c_str())->ipc_message;
+		if (ipc_message != nullptr) {
 			bool end_loop = false;
 			do
 			{
-				scoped_lock<interprocess_mutex> lock(notification->mutex);
-				notification->cond_msg_exists.wait(lock);
+				scoped_lock<interprocess_mutex> lock(ipc_message->mutex);
+				ipc_message->cond_msg_exists.wait(lock);
 
-				if (notification->close)
+				if (ipc_message->close)
 				{
 					end_loop = true;
 				}

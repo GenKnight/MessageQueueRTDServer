@@ -21,12 +21,10 @@ MessageQueue * MessageQueue::instance()
 	return s_instance;
 }
 
-HRESULT MessageQueue::MQOpen(const char *qname, int maxQSize, int maxQMsg)
+HRESULT MessageQueue::MQOpen(const char *qname)
 {
 	try 
 	{
-		message_queue mq(open_or_create, qname, maxQSize, maxQMsg);
-
 		SharedMemory::instance()->createSharedMemory(qname);
 	}
 	catch (interprocess_exception &ex)
@@ -41,13 +39,12 @@ HRESULT MessageQueue::MQClose(const char *qname)
 {
 	try 
 	{
-		message_queue::remove(qname);
-		
-		message_notification * notification = SharedMemory::instance()->getSharedMemory(qname)->notification;
-		if (notification != nullptr) {
-			scoped_lock<interprocess_mutex> lock(notification->mutex);
-			notification->close = true;
-			notification->cond_msg_exists.notify_all();
+		ipc_message_struct * ipc_message = SharedMemory::instance()->getSharedMemory(qname)->ipc_message;
+		if (ipc_message != nullptr)
+		{
+			scoped_lock<interprocess_mutex> lock(ipc_message->mutex);
+			ipc_message->close = true;
+			ipc_message->cond_msg_exists.notify_all();
 		}
 		
 		SharedMemory::instance()->destroySharedMemory(qname);
@@ -64,14 +61,20 @@ HRESULT MessageQueue::MQSend(const char *qname, const char *msg)
 {
 	try
 	{
-		message_queue mq(open_only, qname);
-		mq.send(msg, strlen(msg), 0);
-
-		cout << "Sent: '" << msg << "'" << endl;
-
-		message_notification * notification = SharedMemory::instance()->getSharedMemory(qname)->notification;
-		if (notification != nullptr) {
-			notification->cond_msg_exists.notify_one();
+		ipc_message_struct * ipc_message = SharedMemory::instance()->getSharedMemory(qname)->ipc_message;
+		if (ipc_message != nullptr)
+		{
+			string new_msg = string(msg);
+			if (new_msg.length() > IPC_MSG_MAX_SIZE) {
+				new_msg = new_msg.substr(0, IPC_MSG_MAX_SIZE);
+			}
+			string curr_msg = ipc_message->message;
+			if (new_msg.compare(curr_msg) != 0)
+			{
+				scoped_lock<interprocess_mutex> lock(ipc_message->mutex);
+				ipc_message->message = new_msg;
+				ipc_message->cond_msg_exists.notify_one();
+			}
 		}
 	}
 	catch (interprocess_exception &ex)
@@ -86,17 +89,10 @@ HRESULT MessageQueue::MQRecv(const char *qname, char **msg)
 {
 	try
 	{
-		message_queue mq(open_only, qname);
-		char *m = new char[64];
-		unsigned int priority;
-		size_t recvd_size;
-		if (mq.try_receive(m, strlen(m), recvd_size, priority))
+		ipc_message_struct * ipc_message = SharedMemory::instance()->getSharedMemory(qname)->ipc_message;
+		if (ipc_message != nullptr)
 		{
-			m[recvd_size] = '\0';
-			m = (char *) realloc(m, recvd_size + 1);
-			*msg = m;
-
-			cout << "Reveived: '" << *msg << "'" << endl;
+			*msg = _strdup(ipc_message->message.c_str());
 		}
 		else 
 		{
