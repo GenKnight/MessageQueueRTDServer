@@ -14,6 +14,7 @@ Within Excel, enter the formula '=RTD("MessageQueue.RTDServer",,"MsgQueueName")'
 - HRESULT MQClose(const char \*qname)
 - HRESULT MQSend(const char \*qname, const char \*msg)
 - HRESULT MQRecv(const char \*qname, char \*\*msg)
+
 Note:  The qname and sent msg are restricted to 15 characters for efficiency reasons.  Longer names will be capped to the first 15 characters
 
 
