@@ -34,7 +34,9 @@ Note:  The qname and sent msg are restricted to 15 characters for efficiency rea
 
 
 ### Installation
-- Download the appropriate 32 or 64-bit .dll for your system.  Note:  The appropriate .dll for your system must match the architechure of Excel installed on your system.  You can find the architechure of your Excel intallation from the popup dialog within Excel from `File > Account > About Excel`.  You may even have 32-bit Excel installed on a 64-bit operating system in which case you should install the 32-bit version of this .dll
+- Download the appropriate 32 or 64-bit .dll for your system.  Note:  The appropriate .dll must match the architechure of Excel installed on your system.  You can find the architechure of your Excel intallation from the popup dialog within Excel from `File > Account > About Excel`.  You may even have 32-bit Excel installed on a 64-bit operating system in which case you should install the 32-bit version of this .dll
+  - 32-bit version:  [MessageQueueRTDServer.dll](./MessageQueueRTDServer.dll)
+  - 64-bit version:  [MessageQueueRTDServer_64.dll](./MessageQueueRTDServer_64.dll)
 - Use [RegSvr32] to properly register your .dll on your system
 - Within Excel, goto `File > Options > Add-Ins` and enable *MessageQueue.RTDServer*
 
