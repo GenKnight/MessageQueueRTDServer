@@ -8,7 +8,7 @@ A highly efficient Message Queue RTD Server (.dll) that is intended to provide R
 [Shared Memory Objects] are used to efficiently send inter-process messages and notifications.
 
 ### How it Works
-Within Excel, enter the formula '=RTD("MessageQueue.RTDServer",,"MsgQueueName")'.  You can substitute *"MsgQueueName"* with a name of your choice.  This will open a Messaging Queue on your system named *"MsgQueueName"* and will display any message sent to that queue on your system.
+Within Excel, enter the formula `=RTD("MessageQueue.RTDServer",,"MsgQueueName")`.  You can substitute *"MsgQueueName"* with a name of your choice.  This will open a Messaging Queue on your system named *"MsgQueueName"* and will display any message sent to that queue on your system.
 
 Messages can be sent from other processes or applications on your system, such as Python.  For example, you can use Python's [ctypes] to load the 'MessageQueueRTDServer.dll' into memory and use the exposed API to interact with the queues.  This can be done as follows:
 
