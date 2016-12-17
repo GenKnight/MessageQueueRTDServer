@@ -1,7 +1,7 @@
 # Message Queue RTD Server for Excel
 A highly efficient Message Queue RTD Server (.dll) that is intended to provide Real-Time Data in Excel.
 
-[RTD] function in Excel retrieves real-time data from a program that supports COM automation.
+The [RTD] function in Excel retrieves real-time data from a program that supports COM automation.
 
 [Messaging Queue] is used for inter-process communication (IPC).
 
